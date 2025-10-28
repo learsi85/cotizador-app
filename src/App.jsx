@@ -767,8 +767,8 @@ export default function BusinessAssistant() {
                 <tr>
                   <td>${item.nombre + ' ' + (item.descripcion || '')}</td>
                   <td>${item.cantidad}</td>
-                  <td>${parseFloat(item.precio_venta || item.precio).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
-                  <td>${(item.cantidad * parseFloat(item.precio_venta || item.precio)).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+                  <td>${parseFloat(item.precio_venta || item.precio).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
+                  <td>${(item.cantidad * parseFloat(item.precio_venta || item.precio)).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
                 </tr>
             `).join('')}
         </tbody>
@@ -779,15 +779,15 @@ export default function BusinessAssistant() {
       <table>
         <tr>
           <td>Subtotal:</td>
-          <td>$ ${parseFloat(cot.total).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+          <td>${parseFloat(cot.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
         </tr>
         <tr>
           <td>IVA (16%):</td>
-          <td>$ ${parseFloat(cot.total * 0.16).toFixed(2).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+          <td>${parseFloat(cot.total * 0.16).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
         </tr>
         <tr class="total-final">
           <td>Total:</td>
-          <td>$ ${parseFloat(cot.total * 0.16 + cot.total).toFixed(2).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+          <td>${parseFloat(cot.total * 0.16 + cot.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
         </tr>
       </table>
     </div>
@@ -850,17 +850,20 @@ export default function BusinessAssistant() {
 
     const htmlContent = generarHTMLCotizacion(cotizacionCompleta)+"$%&"+cot.folio;
     const blob = new Blob([htmlContent], { type: 'text/html' });
-
+    
     try {
+      //const response = await fetch(`${API_BASE_URL}/../tools/createPDF.php`);
       const response = await fetch(`${API_BASE_URL}/../tools/createPDF.php`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/pdf',
+          'Content-Type': 'application/octet-stream',
+          'Accept': '*/*' 
         },
-        body: (blob)
-      });
+        body: blob
+      });  
 
       const data = await response.blob();
+      //console.log(data);
       return data;
     } catch (error) {
       console.error('Error:', error);

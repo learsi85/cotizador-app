@@ -1,9 +1,13 @@
 <?php
 // reference the Dompdf namespace
 use Dompdf\Dompdf;
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/pdf; charset=UTF-8");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-require_once '../config/cors.php';
-require '../../vendor/autoload.php';
+//require_once '../config/cors.php';
+require '../vendor/autoload.php';
 
 $html = file_get_contents("php://input");
 $aux = explode("$%&",$html);
@@ -19,7 +23,7 @@ $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 
 // Render the HTML as PDF
-header('Content-Type: application/pdf');
+//header('Content-Type: application/pdf');
 $dompdf->render();
 
 $contenido = $dompdf->output();

@@ -3,7 +3,7 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
 include_once '../../config/database.php';
-include_once '../../models/email.php';
+include_once '../../models/Email.php';
 
 try {
     $database = new Database();
@@ -39,7 +39,7 @@ try {
     } else {
         http_response_code(200);
         echo json_encode(array(
-            "message" => "No se encontraron cotizaciones.",
+            "message" => "No se encontraron correos.",
             "records" => array()
         ));
     }    
@@ -47,7 +47,7 @@ try {
 } catch(Exception $e) {
     http_response_code(500);
     echo json_encode(array(
-        "message" => "Error al obtener cotizaciones.",
+        "message" => "Error al obtener correos.",
         "error" => $e->getMessage()
     ));
 }

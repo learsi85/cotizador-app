@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Mail, FileText, Plus, Send, Download, Trash2, Clock, Upload, Search, ShoppingCart, Package, Settings, Image, Building2, RefreshCw } from 'lucide-react';
+import parse from 'html-react-parser';
+import { Calendar, Mail, FileText, Plus, Send, Download, Trash2, Clock, Upload, Search, ShoppingCart, Package, Settings, Image, Building2, RefreshCw, Check, X } from 'lucide-react';
 
 // Configuración del API
-const API_BASE_URL = 'http://localhost/cotizador/backend/api';
+const API_BASE_URL = 'https://acciontic.com.mx/cotizador_AT/api';
+//const API_BASE_URL = 'http://localhost/cotizador/backend/api';
 
 export default function BusinessAssistant() {
   const [activeTab, setActiveTab] = useState('catalogo');
@@ -12,7 +14,9 @@ export default function BusinessAssistant() {
   const [eventos, setEventos] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+  const [cotizacion, setCotizacion] = useState('');
+  const [activeCot, setActiveCot] = useState('');
+
   const [busqueda, setBusqueda] = useState('');
   const [proveedorFiltro, setProveedorFiltro] = useState('todos');
   const [clienteCotizacion, setClienteCotizacion] = useState('');
@@ -25,11 +29,11 @@ export default function BusinessAssistant() {
     telefono: '',
     email: '',
     rfc: '',
-    sitioWeb: '',
-    condicionesPago: 'Pago: 50% anticipo, 50% contra entrega',
-    condicionesEntrega: 'Entrega: 5-7 días hábiles',
-    vigenciaCotizacion: '15 días',
-    notasAdicionales: 'Precios sujetos a cambio sin previo aviso'
+    sitio_web: '',
+    condiciones_pago: 'Pago: 50% anticipo, 50% contra entrega',
+    condiciones_entrega: 'Entrega: 5-7 días hábiles',
+    vigencia_cotizacion: '15 días',
+    notas_adicionales: 'Precios sujetos a cambio sin previo aviso'
   });
 
   const [configSMTP, setConfigSMTP] = useState({
@@ -56,11 +60,41 @@ export default function BusinessAssistant() {
   });
 
   const [mostrarConfigSMTP, setMostrarConfigSMTP] = useState(false);
+  const [mostrarModalProducto, setMostrarModalProducto] = useState(false);
+  const [mostrarModalProveedor, setMostrarModalProveedor] = useState(false);
+  const [mostrarModalCotizacion, setMostrarModalCotizacion] = useState(false);
+  const [proveedores, setProveedores] = useState([]);
+  
+  const [nuevoProducto, setNuevoProducto] = useState({
+    sku: '',
+    nombre: '',
+    descripcion: '',
+    precio: '',
+    proveedor_id: null,
+    stock: 0
+  });
+
+  const [nuevoProveedor, setNuevoProveedor] = useState({
+    nombre: '',
+    contacto: '',
+    telefono: '',
+    email: '',
+    sitio_web: ''
+  });
+
+  // Cargar datos de la empresa
+  useEffect(() => {
+    if (activeTab === 'config') {
+      cargarEmpresa();
+    }
+  }, [activeTab]);
 
   // Cargar productos al inicio
   useEffect(() => {
     if (activeTab === 'catalogo') {
       cargarProductos();
+      cargarProveedores();
+      cargarEmpresa();
     }
   }, [activeTab]);
 
@@ -68,8 +102,109 @@ export default function BusinessAssistant() {
   useEffect(() => {
     if (activeTab === 'cotizaciones') {
       cargarCotizaciones();
+      setActiveCot('');
     }
   }, [activeTab]);
+
+  // Cargar correos al cambiar a esa pestaña
+  useEffect(() => {
+    if (activeTab === 'correos') {
+      cargarCorreos();
+    }
+  }, [activeTab]);
+
+  // ========== FUNCIONES DE API - EMPRESA ==============
+
+  const cargarEmpresa = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/empresas/read.php`);
+      const data = await response.json();
+
+      if (data) {
+        setConfigEmpresa(data);
+      } else {
+        setConfigEmpresa([]);
+        console.log(data.records);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error al cargar datos Empresa:', error);
+      setLoading(false);
+    }
+  }
+
+  const editarEmpresaAPI = async () => {
+    try{
+      const response = await fetch(`${API_BASE_URL}/empresas/update.php`,{
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configEmpresa)
+      });
+      
+      const data = await response.json();
+      //console.log(data);
+      
+      if (data.success) {
+        alert('✅ Datos actualizados con éxito');
+        cargarEmpresa();
+        return true;
+      } else {
+        alert('❌ Error: ' + data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al actualizar los datos');
+      return false;
+    }
+  }
+
+  // ========== FUNCIONES DE API - PROVEEDORES ==========
+
+  const cargarProveedores = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/proveedores/read.php`);
+      const data = await response.json();
+      
+      if (data.records) {
+        setProveedores(data.records);
+      } else {
+        setProveedores([]);
+      }
+    } catch (error) {
+      console.error('Error al cargar proveedores:', error);
+    }
+  };
+
+  const agregarProveedorAPI = async (proveedor) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/proveedores/create.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(proveedor)
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Proveedor agregado exitosamente');
+        cargarProveedores();
+        return true;
+      } else {
+        alert('❌ Error: ' + data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al agregar proveedor');
+      return false;
+    }
+  };
 
   // ========== FUNCIONES DE API - PRODUCTOS ==========
   
@@ -78,6 +213,7 @@ export default function BusinessAssistant() {
     try {
       const response = await fetch(`${API_BASE_URL}/productos/read.php`);
       const data = await response.json();
+      //console.log(data);
       
       if (data.records) {
         setProductos(data.records);
@@ -127,21 +263,66 @@ export default function BusinessAssistant() {
       });
 
       const data = await response.json();
-      //console.log(data);
       
       if (data.success) {
         alert('✅ Producto agregado exitosamente');
         cargarProductos();
         return true;
       } else {
-
-        alert('❌ Error: ' + data.message + ' ' + data.error);
+        alert('❌ Error: ' + data.message);
         return false;
       }
     } catch (error) {
       console.error('Error:', error);
       alert('Error al agregar producto');
       return false;
+    }
+  };
+
+  const editarProductoAPI = async (producto) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/productos/update.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(producto)
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Producto editado exitosamente');
+        cargarProductos();
+        return true;
+      } else {
+        alert('❌ Error: ' + data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al editar producto');
+      return false;
+    }
+  };
+
+  const editarProducto = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/productos/search.php?sku=${id}`);
+ 
+      const data = await response.json();
+      //console.log(data);
+
+      if(data.message){
+        alert('❌ Error: ' + data.message);
+      }else{
+        //console.log(data);
+        setNuevoProducto(data);
+        setMostrarModalProducto(true);
+      } 
+    } catch (error) {
+      console.error('Error:', error);
+      return null;
     }
   };
 
@@ -191,7 +372,7 @@ export default function BusinessAssistant() {
         nombre: item.nombre,
         cantidad: item.cantidad,
         costo: item.precio,
-        precio: item.precio * (1 + margenGanancia / 100),
+        precio: (Math.round((((item.precio * (1 + margenGanancia / 100)) * .16 + (item.precio * (1 + margenGanancia / 100))) + 5) / 10) * 10) / 1.16,
         proveedor: item.proveedor
       }))
     };
@@ -206,7 +387,6 @@ export default function BusinessAssistant() {
       });
 
       const data = await response.json();
-      //console.log(data);
 
       if (data.success) {
         alert(`✅ Cotización ${data.folio} generada exitosamente`);
@@ -216,7 +396,7 @@ export default function BusinessAssistant() {
         cargarCotizaciones();
       } else {
         alert('❌ Error: ' + data.message);
-      } 
+      }
     } catch (error) {
       console.error('Error:', error);
       alert('Error al generar cotización');
@@ -229,12 +409,41 @@ export default function BusinessAssistant() {
     try {
       const response = await fetch(`${API_BASE_URL}/cotizaciones/read.php?id=${id}`);
       const data = await response.json();
+      setActiveCot(id);
       return data;
     } catch (error) {
       console.error('Error:', error);
       return null;
     }
   };
+
+  const actualizaCotizacion = async (cot) => {
+    const aux = activeCot ? activeCot : cot.id;
+    const auxCot = {
+      id: aux,
+      estado: cot.estado,
+    };
+    console.log(activeCot);
+    try {
+      const response = await fetch(`${API_BASE_URL}/cotizaciones/update.php`,{
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(auxCot)
+      });
+      const data = await response.json();
+      if (data.success) {
+        //alert(`✅ Cotización actualizada exitosamente`);
+        cargarCotizaciones();
+      } else {
+        alert('❌ Error: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      return null;
+    }
+  } 
 
   // ========== FUNCIONES DE API - EMAIL ==========
 
@@ -252,7 +461,8 @@ export default function BusinessAssistant() {
         subject: nuevoCorreo.asunto,
         message: nuevoCorreo.mensaje,
         cotizacionHTML: nuevoCorreo.adjuntarCotizacion ? generarHTMLCotizacion(nuevoCorreo.adjuntarCotizacion) : null,
-        nombreArchivo: nuevoCorreo.adjuntarCotizacion ? `cotizacion_${nuevoCorreo.adjuntarCotizacion.folio || nuevoCorreo.adjuntarCotizacion.id}.html` : null
+        nombreArchivo: nuevoCorreo.adjuntarCotizacion ? `${nuevoCorreo.adjuntarCotizacion.folio || nuevoCorreo.adjuntarCotizacion.id}.pdf` : null,
+        cotizacion_id: activeCot,
       };
 
       const response = await fetch(`${API_BASE_URL}/email/send-cotizacion.php`, {
@@ -264,9 +474,11 @@ export default function BusinessAssistant() {
       });
 
       const data = await response.json();
+      //console.log(data);
 
       if (data.success) {
         alert(`✅ Correo enviado exitosamente a ${nuevoCorreo.destinatario}!`);
+        actualizaCotizacion({estado: 'enviada'});       
         
         const correo = {
           id: Date.now(),
@@ -307,6 +519,26 @@ export default function BusinessAssistant() {
     }
   };
 
+  const cargarCorreos = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/email/read.php`);
+      const data = await response.json();
+      //console.log(data);
+      
+      if (data.records) {
+        setCorreos(data.records);
+      } else {
+        setCorreos([]);
+      }
+    } catch (error) {
+      console.error('Error al cargar correos:', error);
+      alert('Error al cargar correos desde el servidor');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // ========== FUNCIONES LOCALES ==========
 
   const cargarLogo = (e) => {
@@ -339,8 +571,7 @@ export default function BusinessAssistant() {
       
       const indices = {
         sku: encabezados.findIndex(h => h.includes('sku') || h.includes('código') || h.includes('code')),
-        nombre: encabezados.findIndex(h => h.includes('nombre') || h.includes('name') || h.includes('producto')),
-        descripcion: encabezados.findIndex(h => h.includes('descripción') || h.includes('descripcion')),
+        nombre: encabezados.findIndex(h => h.includes('nombre') || h.includes('descripción') || h.includes('name') || h.includes('producto')),
         precio: encabezados.findIndex(h => h.includes('precio') || h.includes('price') || h.includes('costo')),
         proveedor: encabezados.findIndex(h => h.includes('proveedor') || h.includes('marca')),
         stock: encabezados.findIndex(h => h.includes('stock') || h.includes('inventario'))
@@ -357,9 +588,8 @@ export default function BusinessAssistant() {
         const producto = {
           sku: indices.sku >= 0 ? valores[indices.sku] : `SKU-${i}`,
           nombre: indices.nombre >= 0 ? valores[indices.nombre] : 'Producto sin nombre',
-          descripcion: indices.descripcion >=0 ? valores[indices.descripcion] : 'Sin descripcion',
           precio: indices.precio >= 0 ? parseFloat(valores[indices.precio].replace(/[^0-9.]/g, '')) || 0 : 0,
-          proveedor_id: indices.proveedor >= 0 ? valores[indices.proveedor] : ' ',
+          proveedor_id: null,
           stock: indices.stock >= 0 ? parseInt(valores[indices.stock]) || 0 : 0
         };
         
@@ -391,14 +621,10 @@ export default function BusinessAssistant() {
     reader.readAsText(file);
   };
 
-  const agregarProducto = async () => {
-    
-  };
-
   /* const agregarProductoEjemplo = async () => {
     const ejemplos = [
       { sku: 'LAP001', nombre: 'Laptop Dell Latitude 5430 i5 16GB 512GB SSD', precio: 18500, proveedor_id: 1, stock: 15 },
-      { sku: 'MON002', nombre: 'Monitor LG 27" 4K UHD IPS', precio: 6200, proveedor_id: 2, stock: 8 },
+      { sku: 'MON002', nombre: 'Monitor LG 27 4K UHD IPS', precio: 6200, proveedor_id: 2, stock: 8 },
       { sku: 'TEC003', nombre: 'Teclado Logitech MX Keys Inalámbrico', precio: 2100, proveedor_id: 3, stock: 25 },
       { sku: 'MOU004', nombre: 'Mouse Logitech MX Master 3S', precio: 1850, proveedor_id: 4, stock: 30 },
       { sku: 'IMP005', nombre: 'Impresora HP LaserJet Pro M404dn', precio: 7800, proveedor_id: 1, stock: 5 }
@@ -423,12 +649,12 @@ export default function BusinessAssistant() {
       p.sku.toLowerCase().includes(busqueda.toLowerCase());
     
     const coincideProveedor = 
-      proveedorFiltro === 'todos' || p.proveedor === proveedorFiltro;
+      proveedorFiltro === 'todos' || (p.proveedor && p.proveedor === proveedorFiltro);
     
     return coincideBusqueda && coincideProveedor;
   });
 
-  const proveedores = ['todos', ...new Set(productos.map(p => p.proveedor).filter(Boolean))];
+  const nombresProveedores = ['todos', ...proveedores.map(p => p.nombre)];
 
   const agregarAlCarrito = (producto) => {
     const existe = carrito.find(item => item.id === producto.id);
@@ -459,7 +685,10 @@ export default function BusinessAssistant() {
 
   const calcularTotal = () => {
     const subtotal = calcularSubtotal();
-    return subtotal * (1 + margenGanancia / 100);
+    let subtotaux = subtotal * (1 + margenGanancia / 100);
+    subtotaux = (subtotaux * .16 + subtotaux) + 5;
+    subtotaux = (Math.round(subtotaux / 10) * 10) / 1.16;
+    return subtotaux; // subtotal * (1 + margenGanancia / 100);
   };
 
   const calcularGanancia = () => {
@@ -473,108 +702,142 @@ export default function BusinessAssistant() {
 <head>
     <meta charset="UTF-8">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
-        .logo { max-width: 150px; max-height: 80px; }
-        .company-info { text-align: right; font-size: 12px; }
-        .company-name { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 5px; }
-        .cotizacion-info { background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .cotizacion-titulo { font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
-        .info-row { display: flex; justify-content: space-between; margin: 5px 0; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 14px; }
-        td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
-        tr:hover { background: #f9fafb; }
-        .totales { margin-top: 20px; text-align: right; }
-        .total-row { display: flex; justify-content: flex-end; margin: 8px 0; font-size: 14px; }
-        .total-label { width: 200px; text-align: right; padding-right: 20px; font-weight: 500; }
-        .total-value { width: 150px; text-align: right; }
-        .total-final { font-size: 20px; font-weight: bold; color: #2563eb; border-top: 2px solid #2563eb; padding-top: 10px; margin-top: 10px; }
-        .condiciones { margin-top: 30px; padding: 15px; background: #f9fafb; border-left: 4px solid #2563eb; }
-        .condiciones-titulo { font-weight: bold; color: #1f2937; margin-bottom: 10px; }
-        .condiciones-texto { font-size: 12px; line-height: 1.6; color: #6b7280; }
-        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
+        :root { --azul-oscuro: #005595; --azul-claro: #1976d2; --gris-claro: #f5f5f5; --gris-texto: #444;}
+        body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 0; background-color: #fff; color: var(--gris-texto);}
+        .cotizacion { width: 90%; max-width: 900px; margin: 40px auto; background: white; padding: 40px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box;}
+        header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--azul-claro); padding-bottom: 10px; margin-bottom: 20px; gap: 10px;}
+        header img { height: 60px; max-width: 100%;}
+        .empresa { text-align: right; color: var(--azul-oscuro); flex: 1; min-width: 220px;}
+        .empresa h2 { margin: 0; font-size: 22px; }
+        .empresa p {margin: 2px 0; font-size: 13px;}
+        .datos-cliente { margin-bottom: 20px;}
+        .datos-cliente h3 {color: var(--azul-oscuro); border-bottom: 2px solid var(--azul-claro); display: inline-block; padding-bottom: 4px; margin-bottom: 10px; }
+        .tabla-contenedor { width: 105%; overflow-x: auto;}
+        table {width: 100%; border-collapse: collapse; margin-bottom: 20px;}
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px;}
+        th { background-color: var(--azul-claro); color: white; }
+        
+        .totales {width: 100%; max-width: 300px; margin-left: auto; margin-top: 10px;}
+        .totales table { width: 100%; border: none;}
+        .totales td { border: none; padding: 6px 0; text-align: right;}
+        
+        .total-final { font-size: 18px; font-weight: bold; color: var(--azul-oscuro);}
+        .condiciones { clear: both; margin-top: 50px; font-size: 13px;}
+        .condiciones h4 { color: var(--azul-oscuro); border-bottom: 2px solid var(--azul-claro); display: inline-block; padding-bottom: 4px;}
+        /* Modo impresión */
+        @page { margin-left: 0.5cm;	margin-right: 0.5cm; margin-top: 0; margin-bottom: 0}
+        /* Responsivo */
+        @media (max-width: 600px) {.cotizacion {padding: 20px;width: 95%;}header {flex-direction: column; align-items: flex-start; text-align: left; }
+          .empresa {text-align: left;}table, th, td {font-size: 13px;}.totales {width: 100%;max-width: 100%;}.total-final {font-size: 16px;}}
     </style>
 </head>
 <body>
-    <div class="header">
-        <div>
-            ${configEmpresa.logo ? `<img src="${configEmpresa.logo}" class="logo" alt="Logo">` : `<div class="company-name">${configEmpresa.nombre}</div>`}
-        </div>
-        <div class="company-info">
-            <div class="company-name">${configEmpresa.nombre}</div>
-            ${configEmpresa.direccion ? `<div>${configEmpresa.direccion}</div>` : ''}
-            ${configEmpresa.telefono ? `<div>Tel: ${configEmpresa.telefono}</div>` : ''}
-            ${configEmpresa.email ? `<div>${configEmpresa.email}</div>` : ''}
-            ${configEmpresa.rfc ? `<div>RFC: ${configEmpresa.rfc}</div>` : ''}
-            ${configEmpresa.sitioWeb ? `<div>${configEmpresa.sitioWeb}</div>` : ''}
-        </div>
-    </div>
+  <div class="cotizacion">
+    <header>
+      ${configEmpresa.logo ? `<img src="${configEmpresa.logo}" class="logo" alt="Logo">` : `<h2>${configEmpresa.nombre}</h2>`}
+      <div class="empresa">
+        <h2>${configEmpresa.nombre}</h2>
+        ${configEmpresa.direccion ? `<p>${configEmpresa.direccion}</p>` : ''}
+        ${configEmpresa.telefono ? `<p>Tel: ${configEmpresa.telefono}</p>` : ''}
+        ${configEmpresa.email ? `<p>${configEmpresa.email}</p>` : ''}
+        ${configEmpresa.rfc ? `<p>RFC: ${configEmpresa.rfc}</p>` : ''}
+        ${configEmpresa.sitio_web ? `<p>${configEmpresa.sitio_web}</p>` : ''}
+      </div>
+    </header>
 
-    <div class="cotizacion-info">
-        <div class="cotizacion-titulo">COTIZACIÓN ${cot.folio || '#' + cot.id}</div>
-        <div class="info-row">
-            <span><strong>Fecha:</strong> ${cot.fecha}</span>
-            <span><strong>Cliente:</strong> ${cot.cliente_nombre}</span>
-        </div>
-        <div class="info-row">
-            <span><strong>Válida por:</strong> ${configEmpresa.vigenciaCotizacion}</span>
-        </div>
-    </div>
+    <section class="datos-cliente">
+      <h3>COTIZACIÓN ${cot.folio || '#' + cot.id}</h3>
+      <p><strong>Nombre:</strong> ${cot.cliente_nombre}</p>
+      <p><strong>Fecha:</strong> ${cot.fecha}</p>
+      <p><strong>Válida por:</strong> ${configEmpresa.vigencia_cotizacion}</p>
+    </section>
 
-    <table>
+    <div class="tabla-contenedor">
+      <table>
         <thead>
-            <tr>
-                <th style="width: 10%;">Cant.</th>
-                <th style="width: 15%;">SKU</th>
-                <th style="width: 40%;">Descripción</th>
-                <th style="width: 15%;">Precio Unit.</th>
-                <th style="width: 20%;">Subtotal</th>
-            </tr>
+          <tr>
+            <th>Nombre</th>
+            <th>Cantidad</th>
+            <th>Precio Unitario</th>
+            <th>Importe</th>
+          </tr>
         </thead>
         <tbody>
-            ${cot.items.map(item => `
+          ${cot.items.map(item => `
                 <tr>
-                    <td>${item.cantidad}</td>
-                    <td>${item.sku}</td>
-                    <td>${item.nombre}</td>
-                    <td>$${parseFloat(item.precio_venta || item.precio).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
-                    <td>$${(item.cantidad * parseFloat(item.precio_venta || item.precio)).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+                  <td>${item.nombre + ' ' + (item.descripcion || '')}</td>
+                  <td>${item.cantidad}</td>
+                  <td>${parseFloat(item.precio_venta || item.precio).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+                  <td>${(item.cantidad * parseFloat(item.precio_venta || item.precio)).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
                 </tr>
             `).join('')}
         </tbody>
-    </table>
+      </table>
+    </div>
 
     <div class="totales">
-        <div class="total-row">
-            <div class="total-label">Subtotal:</div>
-            <div class="total-value">$${parseFloat(cot.subtotal).toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
-        </div>
-        <div class="total-row total-final">
-            <div class="total-label">TOTAL:</div>
-            <div class="total-value">$${parseFloat(cot.total).toLocaleString('es-MX', {minimumFractionDigits: 2})}</div>
-        </div>
+      <table>
+        <tr>
+          <td>Subtotal:</td>
+          <td>$ ${parseFloat(cot.total).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+        </tr>
+        <tr>
+          <td>IVA (16%):</td>
+          <td>$ ${parseFloat(cot.total * 0.16).toFixed(2).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+        </tr>
+        <tr class="total-final">
+          <td>Total:</td>
+          <td>$ ${parseFloat(cot.total * 0.16 + cot.total).toFixed(2).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+        </tr>
+      </table>
     </div>
 
     <div class="condiciones">
-        <div class="condiciones-titulo">CONDICIONES COMERCIALES</div>
-        <div class="condiciones-texto">
-            ${configEmpresa.condicionesPago ? `<p><strong>Condiciones de Pago:</strong> ${configEmpresa.condicionesPago}</p>` : ''}
-            ${configEmpresa.condicionesEntrega ? `<p><strong>Condiciones de Entrega:</strong> ${configEmpresa.condicionesEntrega}</p>` : ''}
-            ${configEmpresa.notasAdicionales ? `<p><strong>Notas:</strong> ${configEmpresa.notasAdicionales}</p>` : ''}
-        </div>
-    </div>
-
-    <div class="footer">
+      <h4>Condiciones Comerciales</h4>
+        ${configEmpresa.condiciones_pago ? `<p><strong>Condiciones de Pago:</strong> ${configEmpresa.condiciones_pago}</p>` : ''}
+        ${configEmpresa.condiciones_entrega ? `<p><strong>Condiciones de Entrega:</strong> ${configEmpresa.condiciones_entrega}</p>` : ''}
+        ${configEmpresa.notas_adicionales ? `<p><strong>Notas:</strong> ${configEmpresa.notas_adicionales}</p>` : ''}
+        <br/>
         <p>Cotización generada el ${new Date().toLocaleString('es-MX')}</p>
         <p>${configEmpresa.nombre} - Todos los derechos reservados</p>
-    </div>
+  </div>
 </body>
 </html>
     `;
   };
 
+  const verCotizacion = async (cot) => {
+    let cotizacionCompleta = cot;
+    if (!cot.items || cot.items.length === 0) {
+      cotizacionCompleta = await cargarCotizacionDetalle(cot.id);
+      if (!cotizacionCompleta) {
+        alert('Error al cargar detalle de la cotización');
+        return;
+      }
+    }
+    setMostrarModalCotizacion(true);
+
+    const htmlContent = generarHTMLCotizacion(cotizacionCompleta);
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    setCotizacion(`<iframe src="${url}" style="width: 100%; height: 100%" title="Página web en modal" />`);
+    console.log(activeCot);
+  }
+
   const descargarPDF = async (cot) => {
+
+    const data = await generarPDF(cot);
+    if(data){
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = cot.folio+'.pdf';
+      a.click();
+    }
+    
+  };
+
+  const generarPDF = async(cot) => {
     // Si la cotización no tiene items, cargarla de la BD
     let cotizacionCompleta = cot;
     if (!cot.items || cot.items.length === 0) {
@@ -585,29 +848,46 @@ export default function BusinessAssistant() {
       }
     }
 
-    const htmlContent = generarHTMLCotizacion(cotizacionCompleta);
+    const htmlContent = generarHTMLCotizacion(cotizacionCompleta)+"$%&"+cot.folio;
     const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cotizacion_${cotizacionCompleta.folio || cotizacionCompleta.id}.html`;
-    a.click();
-    alert('📄 Cotización descargada. Ábrela en tu navegador y usa "Guardar como PDF"');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/../tools/createPDF.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/pdf',
+        },
+        body: (blob)
+      });
+
+      const data = await response.blob();
+      return data;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error generar el PDF');
+      return false
+    } finally {
+      setLoading(false);
+    }
+
   };
 
   const adjuntarCotizacion = async (cot) => {
     // Cargar cotización completa con items
     const cotizacionCompleta = await cargarCotizacionDetalle(cot.id);
+    setActiveCot(cot.id);
     
     if (!cotizacionCompleta) {
       alert('Error al cargar la cotización');
       return;
     }
 
+    generarPDF(cot);
+
     setNuevoCorreo({
       ...nuevoCorreo,
       asunto: `Cotización ${cotizacionCompleta.folio} - ${configEmpresa.nombre}`,
-      mensaje: `Estimado/a ${cotizacionCompleta.cliente_nombre},\n\nAdjunto encontrarás la cotización ${cotizacionCompleta.folio} por un total de $${parseFloat(cotizacionCompleta.total).toLocaleString('es-MX', {minimumFractionDigits: 2})}.\n\n${configEmpresa.condicionesPago}\n${configEmpresa.condicionesEntrega}\n\nQuedo atento a tus comentarios.\n\nSaludos cordiales,\n${configEmpresa.nombre}`,
+      mensaje: `Estimado/a ${cotizacionCompleta.cliente_nombre},\n\nAdjunto encontrarás la cotización ${cotizacionCompleta.folio} por un total de $${parseFloat(cotizacionCompleta.total).toLocaleString('es-MX', {minimumFractionDigits: 2})}.\n\n${configEmpresa.condiciones_pago}\n${configEmpresa.condiciones_entrega}\n\nQuedo atento a tus comentarios.\n\nSaludos cordiales,\n${configEmpresa.nombre}`,
       adjuntarCotizacion: cotizacionCompleta
     });
     setActiveTab('correos');
@@ -631,6 +911,130 @@ export default function BusinessAssistant() {
     setEventos(eventos.filter(e => e.id !== id));
   };
 
+  const abrirModalProducto = () => {
+    setNuevoProducto({
+      sku: '',
+      nombre: '',
+      descripcion: '',
+      precio: '',
+      proveedor_id: null,
+      stock: 0
+    });
+    setMostrarModalProducto(true);
+  };
+
+  const cerrarModalProducto = () => {
+    setMostrarModalProducto(false);
+    setNuevoProducto({
+      sku: '',
+      nombre: '',
+      descripcion: '',
+      precio: '',
+      proveedor_id: null,
+      stock: 0
+    });
+  };
+
+  const guardarNuevoProducto = async () => {
+    // Validaciones
+    if (!nuevoProducto.sku || !nuevoProducto.nombre || !nuevoProducto.precio) {
+      alert('Por favor completa los campos requeridos: SKU, Nombre y Precio');
+      return;
+    }
+
+    if (parseFloat(nuevoProducto.precio) <= 0) {
+      alert('El precio debe ser mayor a 0');
+      return;
+    }
+
+    setLoading(true);
+
+    let productoData = {
+      sku: nuevoProducto.sku,
+      nombre: nuevoProducto.nombre,
+      descripcion: nuevoProducto.descripcion,
+      precio: parseFloat(nuevoProducto.precio),
+      proveedor_id: nuevoProducto.proveedor_id,
+      stock: parseInt(nuevoProducto.stock) || 0
+    };
+
+    if(nuevoProducto.id){
+      productoData.id = nuevoProducto.id;
+      //console.log(productoData);
+      const resultado = await editarProductoAPI(productoData);
+      if (resultado) {
+        cerrarModalProducto();
+        cargarProductos();
+      }
+    }else{
+      const resultado = await agregarProductoAPI(productoData);
+      if (resultado) {
+        cerrarModalProducto();
+        cargarProductos();
+      }
+    }
+
+    setLoading(false);
+  };
+
+  const abrirModalProveedor = () => {
+    setNuevoProveedor({
+      nombre: '',
+      contacto: '',
+      telefono: '',
+      email: '',
+      sitio_web: ''
+    });
+    setMostrarModalProveedor(true);
+  };
+
+  const cerrarModalProveedor = () => {
+    setMostrarModalProveedor(false);
+    setNuevoProveedor({
+      nombre: '',
+      contacto: '',
+      telefono: '',
+      email: '',
+      sitio_web: ''
+    });
+  };
+
+  const cerrarModalCotizacion = () => {
+    setMostrarModalCotizacion(false);
+  }
+
+  const guardarNuevoProveedor = async () => {
+    // Validación
+    if (!nuevoProveedor.nombre) {
+      alert('Por favor ingresa el nombre del proveedor');
+      return;
+    }
+
+    setLoading(true);
+
+    const resultado = await agregarProveedorAPI(nuevoProveedor);
+
+    if (resultado) {
+      cerrarModalProveedor();
+      cargarProveedores();
+    }
+
+    setLoading(false);
+  };
+
+  const guardarConfigEmpresa = async (id) => {
+    //configEmpresa.id = id;
+    //console.log(configEmpresa);
+    setLoading(true);
+
+    const resultado = await editarEmpresaAPI(configEmpresa);
+
+    if(resultado){
+      cargarEmpresa();
+    }
+    setLoading(false);
+  }
+
   // Efecto para búsqueda con debounce
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -650,13 +1054,329 @@ export default function BusinessAssistant() {
             <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-3xl font-bold mb-2">Sistema de Cotizaciones Profesional</h1>
-                <p className="text-blue-100">Fase 1</p>
+                <p className="text-blue-100">Backend PHP + MySQL + React</p>
               </div>
               {loading && (
                 <RefreshCw className="animate-spin" size={24} />
               )}
             </div>
           </div>
+
+          {/* Modal para Agregar Producto */}
+          {mostrarModalProducto && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      Producto
+                    </h2>
+                    <button
+                      onClick={cerrarModalProducto}
+                      className="text-white hover:text-gray-200 transition"
+                      disabled={loading}
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        SKU <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={nuevoProducto.sku}
+                        onChange={(e) => setNuevoProducto({...nuevoProducto, sku: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="Ej: LAP001"
+                        disabled={nuevoProducto.id ? true : loading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Precio <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-gray-500">$</span>
+                        <input
+                          type="number"
+                          value={nuevoProducto.precio}
+                          onChange={(e) => setNuevoProducto({...nuevoProducto, precio: e.target.value})}
+                          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre del Producto <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoProducto.nombre}
+                      onChange={(e) => setNuevoProducto({...nuevoProducto, nombre: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="Ej: Laptop Dell Latitude 5430"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descripción
+                    </label>
+                    <textarea
+                      value={nuevoProducto.descripcion}
+                      onChange={(e) => setNuevoProducto({...nuevoProducto, descripcion: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      rows="3"
+                      placeholder="Descripción detallada del producto..."
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
+                        <span>Proveedor</span>
+                        <button
+                          onClick={() => {
+                            cerrarModalProducto();
+                            abrirModalProveedor();
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          type="button"
+                        >
+                          <Plus size={12} />
+                          Nuevo
+                        </button>
+                      </label>
+                      <select
+                        value={nuevoProducto.proveedor_id || ''}
+                        onChange={(e) => setNuevoProducto({...nuevoProducto, proveedor_id: e.target.value ? parseInt(e.target.value) : null})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        disabled={loading}
+                      >
+                        <option value="">Sin proveedor</option>
+                        {proveedores.map(prov => (
+                          <option key={prov.id} value={prov.id}>{prov.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Stock Inicial
+                      </label>
+                      <input
+                        type="number"
+                        value={nuevoProducto.stock}
+                        onChange={(e) => setNuevoProducto({...nuevoProducto, stock: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="0"
+                        min="0"
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>💡 Tip:</strong> Los campos marcados con <span className="text-red-500">*</span> son obligatorios.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-6 flex gap-3 justify-end border-t">
+                  <button
+                    onClick={cerrarModalProducto}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition"
+                    disabled={loading}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={guardarNuevoProducto}
+                    disabled={loading}
+                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw size={18} className="animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={18} />
+                        Guardar Producto
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal para Agregar Proveedor */}
+          {mostrarModalProveedor && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <Building2 size={24} />
+                      Agregar Nuevo Proveedor
+                    </h2>
+                    <button
+                      onClick={cerrarModalProveedor}
+                      className="text-white hover:text-gray-200 transition"
+                      disabled={loading}
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre del Proveedor <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoProveedor.nombre}
+                      onChange={(e) => setNuevoProveedor({...nuevoProveedor, nombre: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ej: Distribuidora XYZ"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Persona de Contacto
+                      </label>
+                      <input
+                        type="text"
+                        value={nuevoProveedor.contacto}
+                        onChange={(e) => setNuevoProveedor({...nuevoProveedor, contacto: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Ej: Juan Pérez"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Teléfono
+                      </label>
+                      <input
+                        type="tel"
+                        value={nuevoProveedor.telefono}
+                        onChange={(e) => setNuevoProveedor({...nuevoProveedor, telefono: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="(55) 1234-5678"
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={nuevoProveedor.email}
+                      onChange={(e) => setNuevoProveedor({...nuevoProveedor, email: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="contacto@proveedor.com"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sitio Web
+                    </label>
+                    <input
+                      type="url"
+                      value={nuevoProveedor.sitio_web}
+                      onChange={(e) => setNuevoProveedor({...nuevoProveedor, sitio_web: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://www.proveedor.com"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>💡 Tip:</strong> Los campos marcados con <span className="text-red-500">*</span> son obligatorios.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-6 flex gap-3 justify-end border-t">
+                  <button
+                    onClick={cerrarModalProveedor}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition"
+                    disabled={loading}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={guardarNuevoProveedor}
+                    disabled={loading}
+                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw size={18} className="animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={18} />
+                        Guardar Proveedor
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal para ver cotización */}
+          {mostrarModalCotizacion && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <button
+                onClick={cerrarModalCotizacion}
+                className="text-white hover:text-gray-20 transition"
+                disabled={loading}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full h-full overflow-y-auto" id="divHtml">
+                {parse(cotizacion)}
+              </div>
+            </div>
+          )}
 
           <div className="flex border-b overflow-x-auto">
             <button
@@ -756,7 +1476,7 @@ export default function BusinessAssistant() {
                     </button>
                   </div>
                   <p className="text-xs text-gray-600 mt-3">
-                    ⚙️ Asegúrate de que el backend PHP esté corriendo en: <code className="bg-white px-2 py-1 rounded">localhost/cotizador/backend/</code>
+                    ⚙️ Asegúrate de que el backend PHP esté corriendo en: <code className="bg-white px-2 py-1 rounded">localhost/cotizaciones-backend-php/</code>
                   </p>
                 </div>
 
@@ -840,8 +1560,8 @@ export default function BusinessAssistant() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Sitio Web</label>
                         <input
                           type="text"
-                          value={configEmpresa.sitioWeb}
-                          onChange={(e) => setConfigEmpresa({...configEmpresa, sitioWeb: e.target.value})}
+                          value={configEmpresa.sitio_Web}
+                          onChange={(e) => setConfigEmpresa({...configEmpresa, sitio_Web: e.target.value})}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                           placeholder="www.empresa.com"
                         />
@@ -851,8 +1571,8 @@ export default function BusinessAssistant() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Condiciones de Pago</label>
                       <textarea
-                        value={configEmpresa.condicionesPago}
-                        onChange={(e) => setConfigEmpresa({...configEmpresa, condicionesPago: e.target.value})}
+                        value={configEmpresa.condiciones_pago}
+                        onChange={(e) => setConfigEmpresa({...configEmpresa, condiciones_pago: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                         rows="2"
                         placeholder="Ej: 50% anticipo, 50% contra entrega"
@@ -862,8 +1582,8 @@ export default function BusinessAssistant() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Condiciones de Entrega</label>
                       <textarea
-                        value={configEmpresa.condicionesEntrega}
-                        onChange={(e) => setConfigEmpresa({...configEmpresa, condicionesEntrega: e.target.value})}
+                        value={configEmpresa.condiciones_entrega}
+                        onChange={(e) => setConfigEmpresa({...configEmpresa, condiciones_entrega: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                         rows="2"
                         placeholder="Ej: 5-7 días hábiles"
@@ -875,8 +1595,8 @@ export default function BusinessAssistant() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Vigencia de Cotización</label>
                         <input
                           type="text"
-                          value={configEmpresa.vigenciaCotizacion}
-                          onChange={(e) => setConfigEmpresa({...configEmpresa, vigenciaCotizacion: e.target.value})}
+                          value={configEmpresa.vigencia_cotizacion}
+                          onChange={(e) => setConfigEmpresa({...configEmpresa, vigencia_cotizacion: e.target.value})}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                           placeholder="15 días"
                         />
@@ -885,8 +1605,8 @@ export default function BusinessAssistant() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Notas Adicionales</label>
                         <input
                           type="text"
-                          value={configEmpresa.notasAdicionales}
-                          onChange={(e) => setConfigEmpresa({...configEmpresa, notasAdicionales: e.target.value})}
+                          value={configEmpresa.notas_adicionales}
+                          onChange={(e) => setConfigEmpresa({...configEmpresa, notas_adicionales: e.target.value})}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                           placeholder="Precios sujetos a cambio"
                         />
@@ -894,7 +1614,7 @@ export default function BusinessAssistant() {
                     </div>
 
                     <button
-                      onClick={() => alert('✅ Configuración guardada (localStorage)')}
+                      onClick={() => guardarConfigEmpresa(configEmpresa.id)}
                       className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 font-medium"
                     >
                       Guardar Configuración de Empresa
@@ -930,21 +1650,29 @@ export default function BusinessAssistant() {
             {activeTab === 'catalogo' && (
               <div className="space-y-6">
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-dashed border-green-300">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">📦 Importar Catálogo</h2>
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">📦 Gestión de Productos</h2>
                   <div className="flex flex-wrap gap-3">
-                    <label className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer">
-                      <Upload size={20} />
-                      Cargar CSV
-                      <input type="file" accept=".csv" onChange={cargarCSV} className="hidden" disabled={loading} />
-                    </label>
                     <button
-                      onClick={agregarProducto}
+                      onClick={abrirModalProducto}
                       disabled={loading}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                     >
                       <Plus size={20} />
-                      Agregar Producto
+                      Nuevo Producto
                     </button>
+                    <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
+                      <Upload size={20} />
+                      Importar CSV
+                      <input type="file" accept=".csv" onChange={cargarCSV} className="hidden" disabled={loading} />
+                    </label>
+                    {/*<button
+                      onClick={agregarProductoEjemplo}
+                      disabled={loading}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      <Package size={20} />
+                      Productos de Ejemplo
+                    </button>*/}
                     <button
                       onClick={cargarProductos}
                       disabled={loading}
@@ -955,7 +1683,7 @@ export default function BusinessAssistant() {
                     </button>
                   </div>
                   <p className="text-sm text-gray-600 mt-3">
-                    💡 El CSV debe tener columnas: SKU, Nombre/Descripción, Precio, Proveedor, Stock
+                    💡 Agrega productos manualmente, importa desde CSV o usa ejemplos para probar
                   </p>
                 </div>
 
@@ -976,10 +1704,9 @@ export default function BusinessAssistant() {
                       onChange={(e) => setProveedorFiltro(e.target.value)}
                       className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
+                      <option key="todos" value="todos">Todos los proveedores</option>
                       {proveedores.map(p => (
-                        <option key={p} value={p}>
-                          {p === 'todos' ? 'Todos los proveedores' : p}
-                        </option>
+                        <option key={p.id} value={p.nombre}>{p.nombre}</option>
                       ))}
                     </select>
                   </div>
@@ -1005,7 +1732,12 @@ export default function BusinessAssistant() {
                       {productosFiltrados.map(producto => (
                         <div key={producto.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
                           <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{producto.sku}</span>
+                            <button 
+                              onClick={() => editarProducto(producto.sku)}
+                              className="text-black font-mono bg-gray-100 px-2 py-1 rounded hover:bg-blue"
+                            > 
+                              {producto.sku}
+                            </button>
                             <span className={`text-xs px-2 py-1 rounded ${
                               producto.stock > 10 ? 'bg-green-100 text-green-700' :
                               producto.stock > 0 ? 'bg-yellow-100 text-yellow-700' :
@@ -1076,7 +1808,7 @@ export default function BusinessAssistant() {
                               >
                                 -
                               </button>
-                              <span className="w-12 text-center font-semibold">{item.cantidad}</span>
+                              <span className="w-12 text-center text-black font-semibold">{item.cantidad}</span>
                               <button
                                 onClick={() => actualizarCantidad(item.id, item.cantidad + 1)}
                                 className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
@@ -1128,7 +1860,7 @@ export default function BusinessAssistant() {
                         <div className="mt-6 space-y-2 border-t border-blue-200 pt-4">
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Subtotal (Costo):</span>
-                            <span className="font-semibold">${calcularSubtotal().toLocaleString()}</span>
+                            <span className="text-gray-600 font-semibold">${calcularSubtotal().toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Ganancia ({margenGanancia}%):</span>
@@ -1156,7 +1888,6 @@ export default function BusinessAssistant() {
                           )}
                           Generar Cotización
                         </button>
-                        <div id='pp'></div>
                       </div>
                     </div>
                   )}
@@ -1205,8 +1936,33 @@ export default function BusinessAssistant() {
                             }`}>
                               {cot.estado || 'borrador'}
                             </span>
+                            <button
+                              onClick={() => 
+                                //setActiveCot({id: `${cot.id}`, estado: 'aceptada'}); 
+                                actualizaCotizacion({id: `${cot.id}`, estado: 'aceptada'})
+                              }
+                              className='inline-block mt-2 px-3 py-1 text-xs bg-green-100 text-green-700'
+                            >
+                              <Check size={10}/>
+                            </button>
+                            <button
+                              onClick={() => {
+                                //setActiveCot({id: `${cot.id}`, estado: 'rechazada'}); 
+                                actualizaCotizacion({id: `${cot.id}`, estado: 'rechazada'})
+                              }}
+                              className='inline-block mt-2 px-3 py-1 text-xs bg-red-100 text-red-700'
+                            >
+                              <X size={10}/>
+                            </button>
                           </div>
                           <div className="flex gap-2">
+                            <button
+                              onClick={() => verCotizacion(cot)}
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                            >
+                              <Search size={18} />
+                              Ver
+                            </button>
                             <button
                               onClick={() => descargarPDF(cot)}
                               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
