@@ -1459,9 +1459,6 @@ export default function BusinessAssistant() {
                     <Settings size={20} />
                     Configuración del Backend PHP
                   </h3>
-                  <p className="text-sm text-gray-700 mb-3">
-                    <strong>URL del API:</strong> {API_BASE_URL}
-                  </p>
                   <div className="flex gap-3">
                     <button
                       onClick={cargarProductos}
@@ -1479,9 +1476,6 @@ export default function BusinessAssistant() {
                       Test SMTP
                     </button>
                   </div>
-                  <p className="text-xs text-gray-600 mt-3">
-                    ⚙️ Asegúrate de que el backend PHP esté corriendo en: <code className="bg-white px-2 py-1 rounded">localhost/cotizaciones-backend-php/</code>
-                  </p>
                 </div>
 
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg border border-indigo-200">
@@ -1564,8 +1558,8 @@ export default function BusinessAssistant() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Sitio Web</label>
                         <input
                           type="text"
-                          value={configEmpresa.sitio_Web}
-                          onChange={(e) => setConfigEmpresa({...configEmpresa, sitio_Web: e.target.value})}
+                          value={configEmpresa.sitio_web}
+                          onChange={(e) => setConfigEmpresa({...configEmpresa, sitio_web: e.target.value})}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                           placeholder="www.empresa.com"
                         />
