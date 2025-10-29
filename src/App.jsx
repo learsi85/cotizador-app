@@ -307,8 +307,9 @@ export default function BusinessAssistant() {
   };
 
   const editarProducto = async (id) => {
+
     try {
-      const response = await fetch(`${API_BASE_URL}/productos/search.php?sku=${id}`);
+      const response = await fetch(`${API_BASE_URL}/productos/search.php?sku=${encodeURIComponent(id)}`);
  
       const data = await response.json();
       //console.log(data);
@@ -1057,7 +1058,7 @@ export default function BusinessAssistant() {
             <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-3xl font-bold mb-2">Sistema de Cotizaciones Profesional</h1>
-                <p className="text-blue-100">Backend PHP + MySQL + React</p>
+                <p className="text-blue-100">Versión Prueba 1</p>
               </div>
               {loading && (
                 <RefreshCw className="animate-spin" size={24} />
