@@ -872,7 +872,7 @@ export default function BusinessAssistant() {
     setNuevoCorreo({
       ...nuevoCorreo,
       asunto: `Cotización ${cotizacionCompleta.folio} - ${configEmpresa.nombre}`,
-      mensaje: `Estimado/a ${cotizacionCompleta.cliente_nombre},\n\nAdjunto encontrarás la cotización ${cotizacionCompleta.folio} por un total de $${parseFloat(cotizacionCompleta.total * .16 + cotizacionCompleta.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}.\n\n${configEmpresa.condiciones_pago}\n${configEmpresa.condiciones_entrega}\n\nQuedo atento a tus comentarios.\n\nSaludos cordiales,\n${configEmpresa.nombre}`,
+      mensaje: `Estimado/a ${cotizacionCompleta.cliente_nombre},\n\nAdjunto encontrarás la cotización ${cotizacionCompleta.folio} por un total de ${parseFloat(cotizacionCompleta.total * .16 + cotizacionCompleta.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}.\n\n${configEmpresa.condiciones_pago}\n${configEmpresa.condiciones_entrega}\n\nQuedo atento a tus comentarios.\n\nSaludos cordiales,\n${configEmpresa.nombre}`,
       adjuntarCotizacion: cotizacionCompleta
     });
     setActiveTab('correos');
