@@ -622,28 +622,6 @@ export default function BusinessAssistant() {
     reader.readAsText(file);
   };
 
-  /* const agregarProductoEjemplo = async () => {
-    const ejemplos = [
-      { sku: 'LAP001', nombre: 'Laptop Dell Latitude 5430 i5 16GB 512GB SSD', precio: 18500, proveedor_id: 1, stock: 15 },
-      { sku: 'MON002', nombre: 'Monitor LG 27 4K UHD IPS', precio: 6200, proveedor_id: 2, stock: 8 },
-      { sku: 'TEC003', nombre: 'Teclado Logitech MX Keys Inalámbrico', precio: 2100, proveedor_id: 3, stock: 25 },
-      { sku: 'MOU004', nombre: 'Mouse Logitech MX Master 3S', precio: 1850, proveedor_id: 4, stock: 30 },
-      { sku: 'IMP005', nombre: 'Impresora HP LaserJet Pro M404dn', precio: 7800, proveedor_id: 1, stock: 5 }
-    ];
-
-    setLoading(true);
-    let agregados = 0;
-
-    for (const ejemplo of ejemplos) {
-      const resultado = await agregarProductoAPI(ejemplo);
-      if (resultado) agregados++;
-    }
-
-    alert(`✅ ${agregados} productos de ejemplo agregados`);
-    cargarProductos();
-    setLoading(false);
-  }; */
-
   const productosFiltrados = productos.filter(p => {
     const coincideBusqueda = 
       p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -700,7 +678,7 @@ export default function BusinessAssistant() {
     return `
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <meta charset="UTF-8">
     <style>
         :root { --azul-oscuro: #005595; --azul-claro: #1976d2; --gris-claro: #f5f5f5; --gris-texto: #444;}
@@ -723,86 +701,89 @@ export default function BusinessAssistant() {
         .totales td { border: none; padding: 6px 0; text-align: right;}
         
         .total-final { font-size: 18px; font-weight: bold; color: var(--azul-oscuro);}
-        .condiciones { clear: both; margin-top: 50px; font-size: 13px;}
-        .condiciones h4 { color: var(--azul-oscuro); border-bottom: 2px solid var(--azul-claro); display: inline-block; padding-bottom: 4px;}
+        .condiciones { clear: both; margin-top: 50px; font-size: 12px;}
+        .condiciones h4 { color: var(--azul-oscuro); border-bottom: 2px solid var(--azul-claro); display: inline-block; padding-bottom: 2px;}
+        .footer {font-size: 10px; position: absolute; height: 20px}
         /* Modo impresión */
         @page { margin-left: 0.5cm;	margin-right: 0.5cm; margin-top: 0; margin-bottom: 0}
         /* Responsivo */
         @media (max-width: 600px) {.cotizacion {padding: 20px;width: 95%;}header {flex-direction: column; align-items: flex-start; text-align: left; }
           .empresa {text-align: left;}table, th, td {font-size: 13px;}.totales {width: 100%;max-width: 100%;}.total-final {font-size: 16px;}}
     </style>
-</head>
-<body>
-  <div class="cotizacion">
-    <header>
-      ${configEmpresa.logo ? `<img src="${configEmpresa.logo}" class="logo" alt="Logo">` : `<h2>${configEmpresa.nombre}</h2>`}
-      <div class="empresa">
-        <h2>${configEmpresa.nombre}</h2>
-        ${configEmpresa.direccion ? `<p>${configEmpresa.direccion}</p>` : ''}
-        ${configEmpresa.telefono ? `<p>Tel: ${configEmpresa.telefono}</p>` : ''}
-        ${configEmpresa.email ? `<p>${configEmpresa.email}</p>` : ''}
-        ${configEmpresa.rfc ? `<p>RFC: ${configEmpresa.rfc}</p>` : ''}
-        ${configEmpresa.sitio_web ? `<p>${configEmpresa.sitio_web}</p>` : ''}
+  </head>
+  <body>
+    <div class="cotizacion">
+      <header>
+        ${configEmpresa.logo ? `<img src="${configEmpresa.logo}" class="logo" alt="Logo">` : `<h2>${configEmpresa.nombre}</h2>`}
+        <div class="empresa">
+          <h2>${configEmpresa.nombre}</h2>
+          ${configEmpresa.direccion ? `<p>${configEmpresa.direccion}</p>` : ''}
+          ${configEmpresa.telefono ? `<p>Tel: ${configEmpresa.telefono}</p>` : ''}
+          ${configEmpresa.email ? `<p>${configEmpresa.email}</p>` : ''}
+          ${configEmpresa.rfc ? `<p>RFC: ${configEmpresa.rfc}</p>` : ''}
+          ${configEmpresa.sitio_web ? `<p>${configEmpresa.sitio_web}</p>` : ''}
+        </div>
+      </header>
+
+      <section class="datos-cliente">
+        <h3>COTIZACIÓN ${cot.folio || '#' + cot.id}</h3>
+        <p><strong>Nombre:</strong> ${cot.cliente_nombre}</p>
+        <p><strong>Fecha:</strong> ${cot.fecha}</p>
+        <p><strong>Válida por:</strong> ${configEmpresa.vigencia_cotizacion}</p>
+      </section>
+
+      <div class="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Cantidad</th>
+              <th>Precio Unitario</th>
+              <th>Importe</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cot.items.map(item => `
+                  <tr>
+                    <td>${item.nombre + ' ' + (item.descripcion || '')}</td>
+                    <td>${item.cantidad}</td>
+                    <td>${parseFloat(item.precio_venta || item.precio).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
+                    <td>${(item.cantidad * parseFloat(item.precio_venta || item.precio)).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
+                  </tr>
+              `).join('')}
+          </tbody>
+        </table>
       </div>
-    </header>
 
-    <section class="datos-cliente">
-      <h3>COTIZACIÓN ${cot.folio || '#' + cot.id}</h3>
-      <p><strong>Nombre:</strong> ${cot.cliente_nombre}</p>
-      <p><strong>Fecha:</strong> ${cot.fecha}</p>
-      <p><strong>Válida por:</strong> ${configEmpresa.vigencia_cotizacion}</p>
-    </section>
-
-    <div class="tabla-contenedor">
-      <table>
-        <thead>
+      <div class="totales">
+        <table>
           <tr>
-            <th>Nombre</th>
-            <th>Cantidad</th>
-            <th>Precio Unitario</th>
-            <th>Importe</th>
+            <td>Subtotal:</td>
+            <td>${parseFloat(cot.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
           </tr>
-        </thead>
-        <tbody>
-          ${cot.items.map(item => `
-                <tr>
-                  <td>${item.nombre + ' ' + (item.descripcion || '')}</td>
-                  <td>${item.cantidad}</td>
-                  <td>${parseFloat(item.precio_venta || item.precio).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
-                  <td>${(item.cantidad * parseFloat(item.precio_venta || item.precio)).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
-                </tr>
-            `).join('')}
-        </tbody>
-      </table>
-    </div>
+          <tr>
+            <td>IVA (16%):</td>
+            <td>${parseFloat(cot.total * 0.16).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
+          </tr>
+          <tr class="total-final">
+            <td>Total:</td>
+            <td>${parseFloat(cot.total * 0.16 + cot.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
+          </tr>
+        </table>
+      </div>
 
-    <div class="totales">
-      <table>
-        <tr>
-          <td>Subtotal:</td>
-          <td>${parseFloat(cot.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
-        </tr>
-        <tr>
-          <td>IVA (16%):</td>
-          <td>${parseFloat(cot.total * 0.16).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
-        </tr>
-        <tr class="total-final">
-          <td>Total:</td>
-          <td>${parseFloat(cot.total * 0.16 + cot.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}</td>
-        </tr>
-      </table>
-    </div>
-
-    <div class="condiciones">
-      <h4>Condiciones Comerciales</h4>
+      <div class="condiciones">
+        <h4>Condiciones Comerciales</h4>
         ${configEmpresa.condiciones_pago ? `<p><strong>Condiciones de Pago:</strong> ${configEmpresa.condiciones_pago}</p>` : ''}
         ${configEmpresa.condiciones_entrega ? `<p><strong>Condiciones de Entrega:</strong> ${configEmpresa.condiciones_entrega}</p>` : ''}
         ${configEmpresa.notas_adicionales ? `<p><strong>Notas:</strong> ${configEmpresa.notas_adicionales}</p>` : ''}
-        <br/>
-        <p>Cotización generada el ${new Date().toLocaleString('es-MX')}</p>
-        <p>${configEmpresa.nombre} - Todos los derechos reservados</p>
-  </div>
-</body>
+      </div>
+      <div class="footer">
+          <p>Cotización generada el ${new Date().toLocaleString('es-MX')}<br/>
+          ${configEmpresa.nombre} - Todos los derechos reservados</p>
+      </div>
+    </div>
+  </body>
 </html>
     `;
   };
@@ -822,7 +803,7 @@ export default function BusinessAssistant() {
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     setCotizacion(`<iframe src="${url}" style="width: 100%; height: 100%" title="Página web en modal" />`);
-    console.log(activeCot);
+    
   }
 
   const descargarPDF = async (cot) => {
@@ -891,7 +872,7 @@ export default function BusinessAssistant() {
     setNuevoCorreo({
       ...nuevoCorreo,
       asunto: `Cotización ${cotizacionCompleta.folio} - ${configEmpresa.nombre}`,
-      mensaje: `Estimado/a ${cotizacionCompleta.cliente_nombre},\n\nAdjunto encontrarás la cotización ${cotizacionCompleta.folio} por un total de $${parseFloat(cotizacionCompleta.total).toLocaleString('es-MX', {minimumFractionDigits: 2})}.\n\n${configEmpresa.condiciones_pago}\n${configEmpresa.condiciones_entrega}\n\nQuedo atento a tus comentarios.\n\nSaludos cordiales,\n${configEmpresa.nombre}`,
+      mensaje: `Estimado/a ${cotizacionCompleta.cliente_nombre},\n\nAdjunto encontrarás la cotización ${cotizacionCompleta.folio} por un total de $${parseFloat(cotizacionCompleta.total * .16 + cotizacionCompleta.total).toLocaleString('es-MX', {style:'currency', currency:'MXN'})}.\n\n${configEmpresa.condiciones_pago}\n${configEmpresa.condiciones_entrega}\n\nQuedo atento a tus comentarios.\n\nSaludos cordiales,\n${configEmpresa.nombre}`,
       adjuntarCotizacion: cotizacionCompleta
     });
     setActiveTab('correos');
