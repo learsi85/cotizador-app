@@ -3,8 +3,8 @@ import parse from 'html-react-parser';
 import { Calendar, Mail, FileText, Plus, Send, Download, Trash2, Clock, Upload, Search, ShoppingCart, Package, Settings, Image, Building2, RefreshCw, Check, X } from 'lucide-react';
 
 // Configuración del API
-const API_BASE_URL = 'https://acciontic.com.mx/cotizador_AT/api';
-//const API_BASE_URL = 'http://localhost/cotizador/backend/api';
+//const API_BASE_URL = 'https://acciontic.com.mx/cotizador_AT/api';
+const API_BASE_URL = 'http://localhost/cotizador/backend/api';
 
 export default function BusinessAssistant() {
   const [activeTab, setActiveTab] = useState('catalogo');
@@ -16,6 +16,7 @@ export default function BusinessAssistant() {
   const [loading, setLoading] = useState(false);
   const [cotizacion, setCotizacion] = useState('');
   const [activeCot, setActiveCot] = useState('');
+  const [estadoCotizacion, setEstadoCotizacion] = useState('todo');
 
   const [busqueda, setBusqueda] = useState('');
   const [proveedorFiltro, setProveedorFiltro] = useState('todos');
@@ -125,7 +126,7 @@ export default function BusinessAssistant() {
         setConfigEmpresa(data);
       } else {
         setConfigEmpresa([]);
-        console.log(data.records);
+        //console.log(data.records);
       }
       setLoading(false);
     } catch (error) {
@@ -145,7 +146,6 @@ export default function BusinessAssistant() {
       });
       
       const data = await response.json();
-      //console.log(data);
       
       if (data.success) {
         alert('✅ Datos actualizados con éxito');
@@ -213,7 +213,6 @@ export default function BusinessAssistant() {
     try {
       const response = await fetch(`${API_BASE_URL}/productos/read.php`);
       const data = await response.json();
-      //console.log(data);
       
       if (data.records) {
         setProductos(data.records);
@@ -312,12 +311,10 @@ export default function BusinessAssistant() {
       const response = await fetch(`${API_BASE_URL}/productos/search.php?sku=${encodeURIComponent(id)}`);
  
       const data = await response.json();
-      //console.log(data);
 
       if(data.message){
         alert('❌ Error: ' + data.message);
       }else{
-        //console.log(data);
         setNuevoProducto(data);
         setMostrarModalProducto(true);
       } 
@@ -360,7 +357,7 @@ export default function BusinessAssistant() {
 
     setLoading(true);
     
-    const cotizacionData = {
+    let cotizacionData = {
       cliente_nombre: clienteCotizacion,
       fecha: new Date().toISOString().split('T')[0],
       subtotal: calcularSubtotal(),
@@ -378,8 +375,17 @@ export default function BusinessAssistant() {
       }))
     };
 
+    let fetch2;
+
     try {
-      const response = await fetch(`${API_BASE_URL}/cotizaciones/create.php`, {
+      if(activeCot){
+        cotizacionData.id = activeCot;
+        fetch2 = `${API_BASE_URL}/cotizaciones/update.php`;  
+      }else{
+        fetch2 = `${API_BASE_URL}/cotizaciones/create.php`;
+      }
+
+      const response = await fetch(fetch2, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -390,7 +396,7 @@ export default function BusinessAssistant() {
       const data = await response.json();
 
       if (data.success) {
-        alert(`✅ Cotización ${data.folio} generada exitosamente`);
+        alert(`✅ Cotización ${data.folio} ${data.message}`);
         setCarrito([]);
         setClienteCotizacion('');
         setActiveTab('cotizaciones');
@@ -424,7 +430,6 @@ export default function BusinessAssistant() {
       id: aux,
       estado: cot.estado,
     };
-    console.log(activeCot);
     try {
       const response = await fetch(`${API_BASE_URL}/cotizaciones/update.php`,{
         method: 'POST',
@@ -475,7 +480,6 @@ export default function BusinessAssistant() {
       });
 
       const data = await response.json();
-      //console.log(data);
 
       if (data.success) {
         alert(`✅ Correo enviado exitosamente a ${nuevoCorreo.destinatario}!`);
@@ -525,7 +529,6 @@ export default function BusinessAssistant() {
     try {
       const response = await fetch(`${API_BASE_URL}/email/read.php`);
       const data = await response.json();
-      //console.log(data);
       
       if (data.records) {
         setCorreos(data.records);
@@ -634,6 +637,44 @@ export default function BusinessAssistant() {
   });
 
   const nombresProveedores = ['todos', ...proveedores.map(p => p.nombre)];
+
+  const cotizacionesFiltradas = cotizaciones.filter(cot => {
+    const coincide =
+      estadoCotizacion === 'todo' || (cot.estado === estadoCotizacion)
+    return coincide;
+  });
+
+  const cargarCotizacion = async (id, estado) => {
+    if(estado === 'borrador'){
+
+      const data = await cargarCotizacionDetalle(id);
+      
+      setActiveCot(id);
+      setCarrito([]);
+
+      const productoNuevo = [];
+
+      data.items.map(item => {
+
+        const producto = {
+          activo: true,
+          descripcion: item.descripcion,
+          id: item.producto_id,
+          nombre: item.nombre,
+          precio: item.precio_costo,
+          proveedor: item.proveedor,
+          sku: item.sku,
+          cantidad: parseInt(item.cantidad)
+        };
+
+        productoNuevo.push(producto);
+      });
+
+      setCarrito(productoNuevo);
+      setClienteCotizacion(data.cliente_nombre);
+      setActiveTab('carrito');
+    }
+  };
 
   const agregarAlCarrito = (producto) => {
     const existe = carrito.find(item => item.id === producto.id);
@@ -834,7 +875,7 @@ export default function BusinessAssistant() {
     const blob = new Blob([htmlContent], { type: 'text/html' });
     
     try {
-      //const response = await fetch(`${API_BASE_URL}/../tools/createPDF.php`);
+      
       const response = await fetch(`${API_BASE_URL}/../tools/createPDF.php`, {
         method: 'POST',
         headers: {
@@ -845,7 +886,7 @@ export default function BusinessAssistant() {
       });  
 
       const data = await response.blob();
-      //console.log(data);
+      
       return data;
     } catch (error) {
       console.error('Error:', error);
@@ -877,6 +918,8 @@ export default function BusinessAssistant() {
     });
     setActiveTab('correos');
   };
+
+
 
   const guardarEvento = () => {
     if (!nuevoEvento.titulo || !nuevoEvento.fecha) {
@@ -945,7 +988,7 @@ export default function BusinessAssistant() {
 
     if(nuevoProducto.id){
       productoData.id = nuevoProducto.id;
-      //console.log(productoData);
+      
       const resultado = await editarProductoAPI(productoData);
       if (resultado) {
         cerrarModalProducto();
@@ -1009,7 +1052,7 @@ export default function BusinessAssistant() {
 
   const guardarConfigEmpresa = async (id) => {
     //configEmpresa.id = id;
-    //console.log(configEmpresa);
+    
     setLoading(true);
 
     const resultado = await editarEmpresaAPI(configEmpresa);
@@ -1644,14 +1687,7 @@ export default function BusinessAssistant() {
                       Importar CSV
                       <input type="file" accept=".csv" onChange={cargarCSV} className="hidden" disabled={loading} />
                     </label>
-                    {/*<button
-                      onClick={agregarProductoEjemplo}
-                      disabled={loading}
-                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                    >
-                      <Package size={20} />
-                      Productos de Ejemplo
-                    </button>*/}
+                    
                     <button
                       onClick={cargarProductos}
                       disabled={loading}
@@ -1752,8 +1788,13 @@ export default function BusinessAssistant() {
             {activeTab === 'carrito' && (
               <div className="space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">🛒 Carrito de Cotización</h2>
-                  
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">🛒 Carrito de Cotización {activeCot ? `(${activeCot})` : ``}</h2>
+                  <button
+                    className="inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700"
+                    onClick={() => {setActiveCot(''); setCarrito([]); setClienteCotizacion('');}}
+                    >
+                    Nueva
+                  </button>
                   {carrito.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       <ShoppingCart size={48} className="mx-auto mb-3 opacity-50" />
@@ -1887,7 +1928,26 @@ export default function BusinessAssistant() {
                     Recargar
                   </button>
                 </div>
-
+                <button 
+                  className='inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-black-100 text-black-700'
+                  onClick={() => setEstadoCotizacion('todo')}
+                > Todas </button>
+                <button 
+                  className='inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700'
+                  onClick={() => setEstadoCotizacion('enviada')}
+                > Enviadas </button>
+                <button 
+                  className='inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-green-100 text-green-700'
+                  onClick={() => setEstadoCotizacion('aceptada')}
+                > Aceptadas </button>
+                <button 
+                  className='inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-red-100 text-red-700'
+                  onClick={() => setEstadoCotizacion('rechazada')}
+                > Rechazadas </button>
+                <button 
+                  className='inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-700'
+                  onClick={() => setEstadoCotizacion('borrador')}
+                > Borradores </button>
                 {loading ? (
                   <div className="text-center py-12">
                     <RefreshCw className="animate-spin mx-auto mb-3" size={48} />
@@ -1900,20 +1960,20 @@ export default function BusinessAssistant() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {cotizaciones.map(cot => (
+                    {cotizacionesFiltradas.map(cot => (
                       <div key={cot.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <h3 className="text-lg font-bold text-gray-800">{cot.cliente_nombre}</h3>
                             <p className="text-sm text-gray-600">Fecha: {cot.fecha}</p>
                             <p className="text-sm text-gray-600">{cot.folio}</p>
-                            <span className={`inline-block mt-2 px-3 py-1 rounded text-xs font-semibold ${
+                            <span className={`inline-block mt-2 px-3 py-1 rounded text-xs font-semibold cursor-pointer ${
                               cot.estado === 'enviada' ? 'bg-blue-100 text-blue-700' :
                               cot.estado === 'aceptada' ? 'bg-green-100 text-green-700' :
                               cot.estado === 'rechazada' ? 'bg-red-100 text-red-700' :
                               'bg-gray-100 text-gray-700'
-                            }`}>
-                              {cot.estado || 'borrador'}
+                            }`} onClick={() => cargarCotizacion(cot.id, cot.estado)} >
+                              {cot.estado}
                             </span>
                             <button
                               onClick={() => 

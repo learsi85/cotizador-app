@@ -23,7 +23,7 @@ try {
         if($cotizacion->updateEstado($data->estado)) {
             http_response_code(201);
             echo json_encode(array(
-                "message" => "Cotización creada exitosamente.",
+                "message" => "creada exitosamente.",
                 "success" => true,
                 "folio" => $cotizacion->folio,
                 "id" => $cotizacion->id
@@ -36,11 +36,41 @@ try {
             ));
         } 
     } else {
-        http_response_code(400);
-        echo json_encode(array(
-            "message" => "Datos incompletos. Se requiere: id y estado",
-            "success" => false
-        ));
+        if(!empty($data->id)){
+
+            $cotizacion->id = $data->id;
+            $cotizacion->cliente_id = $data->cliente_id ?? null;
+            $cotizacion->cliente_nombre = $data->cliente_nombre;
+            $cotizacion->fecha = $data->fecha ?? date('Y-m-d');
+            $cotizacion->subtotal = $data->subtotal;
+            $cotizacion->margen_porcentaje = $data->margen;
+            $cotizacion->ganancia = $data->ganancia;
+            $cotizacion->total = $data->total;
+            $cotizacion->items = $data->items; 
+
+            if($cotizacion->update()) {
+                http_response_code(201);
+                $folio = "COT-" . date('Y') . "-" . str_pad($cotizacion->id, 6, '0', STR_PAD_LEFT);
+                echo json_encode(array(
+                    "message" => "actualizada exitosamente.",
+                    "success" => true,
+                    "folio" => $folio,
+                    "id" => $cotizacion->id
+                ));
+            } else {
+                http_response_code(503);
+                echo json_encode(array(
+                    "message" => "No se pudo actualizar la cotización.",
+                    "success" => false
+                ));
+            } 
+        }else{
+            http_response_code(400);
+            echo json_encode(array(
+                "message" => "Datos incompletos. Se requiere: id y/o estado",
+                "success" => false
+            ));
+        }
     } 
     
 } catch(Exception $e) {

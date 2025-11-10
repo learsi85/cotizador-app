@@ -120,6 +120,87 @@ class Cotizacion {
         } 
     }
 
+    // Actualiza cotizacion
+    public function update() {
+        $this->conn->beginTransaction();
+        
+ 
+        try {            
+            // Update cotización
+            $query = "UPDATE " . $this->table_name . "
+                      SET cliente_id = :cliente_id,
+                          cliente_nombre = :cliente_nombre,
+                          fecha = :fecha,
+                          subtotal = :subtotal,
+                          margen_porcentaje = :margen_porcentaje,
+                          ganancia = :ganancia,
+                          total = :total
+                        WHERE id = :id";
+
+            $stmt = $this->conn->prepare($query);
+
+            // Sanitizar
+            $this->cliente_nombre = htmlspecialchars(strip_tags($this->cliente_nombre));
+            $this->fecha = htmlspecialchars(strip_tags($this->fecha));
+
+            // Bind
+            $stmt->bindParam(":cliente_id", $this->cliente_id);
+            $stmt->bindParam(":cliente_nombre", $this->cliente_nombre);
+            $stmt->bindParam(":fecha", $this->fecha);
+            $stmt->bindParam(":subtotal", $this->subtotal);
+            $stmt->bindParam(":margen_porcentaje", $this->margen_porcentaje);
+            $stmt->bindParam(":ganancia", $this->ganancia);
+            $stmt->bindParam(":total", $this->total);
+            $stmt->bindParam(":id", $this->id);
+
+            $stmt->execute();
+            $query = "DELETE FROM cotizacion_items 
+                      WHERE cotizacion_id = :id";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":id", $this->id);
+            $stmt->execute();
+
+            $cotizacion_id = $this->id;
+
+            // Insertar items
+            $query_items = "INSERT INTO cotizacion_items
+                            SET cotizacion_id = :cotizacion_id,
+                                producto_id = :producto_id,
+                                sku = :sku,
+                                nombre = :nombre,
+                                cantidad = :cantidad,
+                                precio_costo = :precio_costo,
+                                precio_venta = :precio_venta,
+                                subtotal = :subtotal,
+                                proveedor = :proveedor";
+
+            $stmt_items = $this->conn->prepare($query_items);
+
+            foreach ($this->items as $item) {
+                $stmt_items->bindParam(":cotizacion_id", $cotizacion_id);
+                $stmt_items->bindParam(":producto_id", $item->producto_id);
+                $stmt_items->bindParam(":sku", $item->sku);
+                $stmt_items->bindParam(":nombre", $item->nombre);
+                $stmt_items->bindParam(":cantidad", $item->cantidad);
+                $stmt_items->bindParam(":precio_costo", $item->costo);
+                $stmt_items->bindParam(":precio_venta", $item->precio);
+                $subtotal_item = $item->cantidad * $item->precio;
+                $stmt_items->bindParam(":subtotal", $subtotal_item);
+                $stmt_items->bindParam(":proveedor", $item->proveedor); 
+                $stmt_items->execute();
+            }
+
+            $this->conn->commit();
+            return true;
+
+        } catch(Exception $e) {
+            $this->conn->rollBack();
+            error_log("Error al crear cotización: " . $e->getMessage());
+            return false;
+        } 
+    }
+
     // Leer cotizaciones
     public function read() {
         $query = "SELECT 
