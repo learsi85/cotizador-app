@@ -1930,6 +1930,7 @@ export default function BusinessAssistant() {
                 </div>
                 <button 
                   className='inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-black-100 text-black-700'
+                  style={{background: 'black'}}
                   onClick={() => setEstadoCotizacion('todo')}
                 > Todas </button>
                 <button 
