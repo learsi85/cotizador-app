@@ -3,8 +3,8 @@ import parse from 'html-react-parser';
 import { Calendar, Mail, FileText, Plus, Send, Download, Trash2, Clock, Upload, Search, ShoppingCart, Package, Settings, Image, Building2, RefreshCw, Check, X } from 'lucide-react';
 
 // Configuración del API
-//const API_BASE_URL = 'https://acciontic.com.mx/cotizador_AT/api';
-const API_BASE_URL = 'http://localhost/cotizador/backend/api';
+const API_BASE_URL = 'https://acciontic.com.mx/cotizador_AT/api';
+//const API_BASE_URL = 'http://localhost/cotizador/backend/api';
 
 export default function BusinessAssistant() {
   const [activeTab, setActiveTab] = useState('catalogo');
