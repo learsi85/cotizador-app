@@ -3,8 +3,8 @@ import parse from 'html-react-parser';
 import { Calendar, Mail, FileText, Plus, Send, Download, Trash2, Clock, Upload, Search, ShoppingCart, Package, Settings, Image, Building2, RefreshCw, Check, X } from 'lucide-react';
 
 // Configuración del API
-const API_BASE_URL = 'https://acciontic.com.mx/cotizador_AT/api';
-//const API_BASE_URL = 'http://localhost/cotizador/backend/api';
+//const API_BASE_URL = 'https://acciontic.com.mx/cotizador_AT/api';
+const API_BASE_URL = 'http://localhost/cotizador/backend/api';
 
 export default function BusinessAssistant() {
   const [activeTab, setActiveTab] = useState('catalogo');
@@ -16,6 +16,7 @@ export default function BusinessAssistant() {
   const [loading, setLoading] = useState(false);
   const [cotizacion, setCotizacion] = useState('');
   const [activeCot, setActiveCot] = useState('');
+  const [editaCot, setEditaCot] = useState('');
   const [estadoCotizacion, setEstadoCotizacion] = useState('todo');
 
   const [busqueda, setBusqueda] = useState('');
@@ -103,7 +104,7 @@ export default function BusinessAssistant() {
   useEffect(() => {
     if (activeTab === 'cotizaciones') {
       cargarCotizaciones();
-      setActiveCot('');
+      //setActiveCot('');
     }
   }, [activeTab]);
 
@@ -378,8 +379,8 @@ export default function BusinessAssistant() {
     let fetch2;
 
     try {
-      if(activeCot){
-        cotizacionData.id = activeCot;
+      if(editaCot){
+        cotizacionData.id = editaCot;
         fetch2 = `${API_BASE_URL}/cotizaciones/update.php`;  
       }else{
         fetch2 = `${API_BASE_URL}/cotizaciones/create.php`;
@@ -401,6 +402,7 @@ export default function BusinessAssistant() {
         setClienteCotizacion('');
         setActiveTab('cotizaciones');
         cargarCotizaciones();
+        setEditaCot('');
       } else {
         alert('❌ Error: ' + data.message);
       }
@@ -416,7 +418,7 @@ export default function BusinessAssistant() {
     try {
       const response = await fetch(`${API_BASE_URL}/cotizaciones/read.php?id=${id}`);
       const data = await response.json();
-      setActiveCot(id);
+      //setActiveCot(id);
       return data;
     } catch (error) {
       console.error('Error:', error);
@@ -424,11 +426,10 @@ export default function BusinessAssistant() {
     }
   };
 
-  const actualizaCotizacion = async (cot) => {
-    const aux = activeCot ? activeCot : cot.id;
+  const actualizaCotizacion = async (id, estado) => {
     const auxCot = {
-      id: aux,
-      estado: cot.estado,
+      id: id,
+      estado: estado,
     };
     try {
       const response = await fetch(`${API_BASE_URL}/cotizaciones/update.php`,{
@@ -440,7 +441,7 @@ export default function BusinessAssistant() {
       });
       const data = await response.json();
       if (data.success) {
-        //alert(`✅ Cotización actualizada exitosamente`);
+        alert(`✅ Cotización ${data.folio} actualizada exitosamente`);
         cargarCotizaciones();
       } else {
         alert('❌ Error: ' + data.message);
@@ -470,7 +471,7 @@ export default function BusinessAssistant() {
         nombreArchivo: nuevoCorreo.adjuntarCotizacion ? `${nuevoCorreo.adjuntarCotizacion.folio || nuevoCorreo.adjuntarCotizacion.id}.pdf` : null,
         cotizacion_id: activeCot,
       };
-
+      
       const response = await fetch(`${API_BASE_URL}/email/send-cotizacion.php`, {
         method: 'POST',
         headers: {
@@ -483,17 +484,8 @@ export default function BusinessAssistant() {
 
       if (data.success) {
         alert(`✅ Correo enviado exitosamente a ${nuevoCorreo.destinatario}!`);
-        actualizaCotizacion({estado: 'enviada'});       
-        
-        const correo = {
-          id: Date.now(),
-          ...nuevoCorreo,
-          fecha: new Date().toLocaleString(),
-          enviado: true
-        };
-        
-        setCorreos([...correos, correo]);
-        setNuevoCorreo({ destinatario: '', asunto: '', mensaje: '', adjuntarCotizacion: null });
+        actualizaCotizacion(activeCot, 'enviada');       
+        limpiarCorreo();
       } else {
         alert('❌ Error: ' + data.message);
       }
@@ -544,6 +536,20 @@ export default function BusinessAssistant() {
   }
 
   // ========== FUNCIONES LOCALES ==========
+
+  const limpiarCorreo = () => {
+    const correo = {
+      id: Date.now(),
+      ...nuevoCorreo,
+      fecha: new Date().toLocaleString(),
+      enviado: true
+    };
+        
+    setCorreos([...correos, correo]);
+    setNuevoCorreo({ destinatario: '', asunto: '', mensaje: '', adjuntarCotizacion: null });
+    setActiveCot('');
+
+  }
 
   const cargarLogo = (e) => {
     const file = e.target.files[0];
@@ -649,7 +655,7 @@ export default function BusinessAssistant() {
 
       const data = await cargarCotizacionDetalle(id);
       
-      setActiveCot(id);
+      setEditaCot(id);
       setCarrito([]);
 
       const productoNuevo = [];
@@ -886,7 +892,7 @@ export default function BusinessAssistant() {
       });  
 
       const data = await response.blob();
-      
+      //console.log(cot);
       return data;
     } catch (error) {
       console.error('Error:', error);
@@ -1788,10 +1794,10 @@ export default function BusinessAssistant() {
             {activeTab === 'carrito' && (
               <div className="space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">🛒 Carrito de Cotización {activeCot ? `(${activeCot})` : ``}</h2>
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">🛒 Carrito de Cotización {editaCot ? `(${editaCot})` : ``}</h2>
                   <button
                     className="inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700"
-                    onClick={() => {setActiveCot(''); setCarrito([]); setClienteCotizacion('');}}
+                    onClick={() => {setEditaCot(''); setCarrito([]); setClienteCotizacion('');}}
                     >
                     Nueva
                   </button>
@@ -1979,7 +1985,7 @@ export default function BusinessAssistant() {
                             <button
                               onClick={() => 
                                 //setActiveCot({id: `${cot.id}`, estado: 'aceptada'}); 
-                                actualizaCotizacion({id: `${cot.id}`, estado: 'aceptada'})
+                                actualizaCotizacion(cot.id, 'aceptada')
                               }
                               className='inline-block mt-2 px-3 py-1 text-xs bg-green-100 text-green-700'
                             >
@@ -1988,7 +1994,7 @@ export default function BusinessAssistant() {
                             <button
                               onClick={() => {
                                 //setActiveCot({id: `${cot.id}`, estado: 'rechazada'}); 
-                                actualizaCotizacion({id: `${cot.id}`, estado: 'rechazada'})
+                                actualizaCotizacion(cot.id, 'rechazada')
                               }}
                               className='inline-block mt-2 px-3 py-1 text-xs bg-red-100 text-red-700'
                             >
@@ -2011,7 +2017,10 @@ export default function BusinessAssistant() {
                               PDF
                             </button>
                             <button
-                              onClick={() => adjuntarCotizacion(cot)}
+                              onClick={() => {
+                                cot.estado === 'rechazada' ||
+                                adjuntarCotizacion(cot)
+                              }}
                               disabled={loading}
                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                             >
@@ -2048,8 +2057,15 @@ export default function BusinessAssistant() {
             {activeTab === 'correos' && (
               <div className="space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">Redactar Correo</h2>
-                  
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Redactar Correo</h2>
+                    <button
+                      onClick={() => limpiarCorreo()}
+                      className="flex items-center px-4 py-2 bg-transparent hover:bg-red-500 text-red-700 font-semibold hover:text-white py-1 px-2 border border-red-500 hover:border-transparent rounded"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                   {nuevoCorreo.adjuntarCotizacion && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
                       <div className="flex items-center gap-2">

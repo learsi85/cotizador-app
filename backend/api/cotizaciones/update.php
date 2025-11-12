@@ -22,10 +22,11 @@ try {
         
         if($cotizacion->updateEstado($data->estado)) {
             http_response_code(201);
+            $folio = "COT-" . date('Y') . "-" . str_pad($cotizacion->id, 6, '0', STR_PAD_LEFT);
             echo json_encode(array(
-                "message" => "creada exitosamente.",
+                "message" => "actualizada exitosamente.",
                 "success" => true,
-                "folio" => $cotizacion->folio,
+                "folio" => $folio,
                 "id" => $cotizacion->id
             ));
         } else {

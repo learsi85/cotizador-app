@@ -32,7 +32,7 @@ try {
         if($cotizacion->create()) {
             http_response_code(201);
             echo json_encode(array(
-                "message" => "Cotización creada exitosamente.",
+                "message" => "creada exitosamente.",
                 "success" => true,
                 "folio" => $cotizacion->folio,
                 "id" => $cotizacion->id
