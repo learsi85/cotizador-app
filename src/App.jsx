@@ -212,7 +212,9 @@ export default function BusinessAssistant() {
   const cargarProductos = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/productos/read.php`);
+      const response = await fetch(`${API_BASE_URL}/productos/read.php?_=${Date.now()}`, {
+        cache: "no-store"
+      });
       const data = await response.json();
       
       if (data.records) {
