@@ -44,7 +44,6 @@ try {
             $cotizacion->cliente_nombre = $data->cliente_nombre;
             $cotizacion->fecha = $data->fecha ?? date('Y-m-d');
             $cotizacion->subtotal = $data->subtotal;
-            $cotizacion->margen_porcentaje = $data->margen;
             $cotizacion->ganancia = $data->ganancia;
             $cotizacion->total = $data->total;
             $cotizacion->items = $data->items; 

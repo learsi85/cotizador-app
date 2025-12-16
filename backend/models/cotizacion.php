@@ -55,7 +55,6 @@ class Cotizacion {
                           cliente_nombre = :cliente_nombre,
                           fecha = :fecha,
                           subtotal = :subtotal,
-                          margen_porcentaje = :margen_porcentaje,
                           ganancia = :ganancia,
                           total = :total,
                           estado = :estado";
@@ -73,7 +72,6 @@ class Cotizacion {
             $stmt->bindParam(":cliente_nombre", $this->cliente_nombre);
             $stmt->bindParam(":fecha", $this->fecha);
             $stmt->bindParam(":subtotal", $this->subtotal);
-            $stmt->bindParam(":margen_porcentaje", $this->margen_porcentaje);
             $stmt->bindParam(":ganancia", $this->ganancia);
             $stmt->bindParam(":total", $this->total);
             $stmt->bindParam(":estado", $this->estado);
@@ -89,6 +87,7 @@ class Cotizacion {
                                 nombre = :nombre,
                                 cantidad = :cantidad,
                                 precio_costo = :precio_costo,
+                                margen = :margen,
                                 precio_venta = :precio_venta,
                                 subtotal = :subtotal,
                                 proveedor = :proveedor";
@@ -102,6 +101,7 @@ class Cotizacion {
                 $stmt_items->bindParam(":nombre", $item->nombre);
                 $stmt_items->bindParam(":cantidad", $item->cantidad);
                 $stmt_items->bindParam(":precio_costo", $item->costo);
+                $stmt_items->bindParam(":margen", $item->margen);
                 $stmt_items->bindParam(":precio_venta", $item->precio);
                 $subtotal_item = $item->cantidad * $item->precio;
                 $stmt_items->bindParam(":subtotal", $subtotal_item);
@@ -132,7 +132,6 @@ class Cotizacion {
                           cliente_nombre = :cliente_nombre,
                           fecha = :fecha,
                           subtotal = :subtotal,
-                          margen_porcentaje = :margen_porcentaje,
                           ganancia = :ganancia,
                           total = :total
                         WHERE id = :id";
@@ -148,7 +147,6 @@ class Cotizacion {
             $stmt->bindParam(":cliente_nombre", $this->cliente_nombre);
             $stmt->bindParam(":fecha", $this->fecha);
             $stmt->bindParam(":subtotal", $this->subtotal);
-            $stmt->bindParam(":margen_porcentaje", $this->margen_porcentaje);
             $stmt->bindParam(":ganancia", $this->ganancia);
             $stmt->bindParam(":total", $this->total);
             $stmt->bindParam(":id", $this->id);
@@ -171,6 +169,7 @@ class Cotizacion {
                                 nombre = :nombre,
                                 cantidad = :cantidad,
                                 precio_costo = :precio_costo,
+                                margen = :margen,
                                 precio_venta = :precio_venta,
                                 subtotal = :subtotal,
                                 proveedor = :proveedor";
@@ -184,6 +183,7 @@ class Cotizacion {
                 $stmt_items->bindParam(":nombre", $item->nombre);
                 $stmt_items->bindParam(":cantidad", $item->cantidad);
                 $stmt_items->bindParam(":precio_costo", $item->costo);
+                $stmt_items->bindParam(":margen", $item->margen);
                 $stmt_items->bindParam(":precio_venta", $item->precio);
                 $subtotal_item = $item->cantidad * $item->precio;
                 $stmt_items->bindParam(":subtotal", $subtotal_item);

@@ -22,7 +22,7 @@ export default function BusinessAssistant() {
   const [busqueda, setBusqueda] = useState('');
   const [proveedorFiltro, setProveedorFiltro] = useState('todos');
   const [clienteCotizacion, setClienteCotizacion] = useState('');
-  const [margenGanancia, setMargenGanancia] = useState(20);
+  const [margenGlobal, setMargenGlobal] = useState(20);
 
   const [configEmpresa, setConfigEmpresa] = useState({
     nombre: 'Mi Empresa',
@@ -364,16 +364,16 @@ export default function BusinessAssistant() {
       cliente_nombre: clienteCotizacion,
       fecha: new Date().toISOString().split('T')[0],
       subtotal: calcularSubtotal(),
-      margen: margenGanancia,
-      ganancia: calcularGanancia(),
-      total: calcularTotal(),
+      ganancia: calcularGananciaTotal(),
+      total: calcularTotalVenta(),
       items: carrito.map(item => ({
         producto_id: item.id,
         sku: item.sku,
         nombre: item.nombre,
         cantidad: item.cantidad,
         costo: item.precio,
-        precio: (Math.round((((item.precio * (1 + margenGanancia / 100)) * .16 + (item.precio * (1 + margenGanancia / 100))) + 5) / 10) * 10) / 1.16,
+        margen: item.margen,
+        precio: calcularPrecioVenta(item.precio, item.margen),
         proveedor: item.proveedor
       }))
     };
@@ -397,6 +397,7 @@ export default function BusinessAssistant() {
       });
 
       const data = await response.json();
+      //console.log(data);
 
       if (data.success) {
         alert(`✅ Cotización ${data.folio} ${data.message}`);
@@ -670,6 +671,9 @@ export default function BusinessAssistant() {
           id: item.producto_id,
           nombre: item.nombre,
           precio: item.precio_costo,
+          margen: item.margen,
+          venta: item.precio_venta,
+          subtotal: item.subtotal,
           proveedor: item.proveedor,
           sku: item.sku,
           cantidad: parseInt(item.cantidad)
@@ -693,22 +697,47 @@ export default function BusinessAssistant() {
           : item
       ));
     } else {
-      setCarrito([...carrito, { ...producto, cantidad: 1 }]);
+      setCarrito([...carrito, { ...producto, cantidad: 1, margen: 10 }]);
     }
   };
 
-  const actualizarCantidad = (id, cantidad) => {
-    if (cantidad <= 0) {
+  const actualizarCantidad = (id, nuevaCantidad) => {
+    if (nuevaCantidad === 0) {
       setCarrito(carrito.filter(item => item.id !== id));
     } else {
-      setCarrito(carrito.map(item => 
-        item.id === id ? { ...item, cantidad } : item
+      setCarrito(carrito.map(item =>
+        item.id === id ? { ...item, cantidad: Math.max(1, nuevaCantidad) } : item
       ));
     }
   };
 
+  const actualizarMargen = (id, nuevoMargen = 10) => {
+    setCarrito(carrito.map(item =>
+      item.id === id ? { ...item, margen: parseInt(nuevoMargen) } : item
+    ));
+  };
+
+  const aplicarMargenGlobal = () => {
+    setCarrito(carrito.map(item => ({ ...item, margen: margenGlobal })));
+  };
+
+  const calcularPrecioVenta = (precio, margen) => {
+    const precioVenta = (Math.round((((precio * (1 + margen / 100)) * .16 + (precio * (1 + margen / 100))) + 5) / 10) * 10) / 1.16
+    return precioVenta;
+  };
+
   const calcularSubtotal = () => {
     return carrito.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+  };
+
+  const calcularTotalVenta = () => {
+    return carrito.reduce((sum, item) => 
+      sum + (calcularPrecioVenta(item.precio, item.margen) * item.cantidad), 0
+    );
+  };
+
+  const calcularGananciaTotal = () => {
+    return calcularTotalVenta() - calcularSubtotal();
   };
 
   const calcularTotal = () => {
@@ -1796,11 +1825,17 @@ export default function BusinessAssistant() {
             {activeTab === 'carrito' && (
               <div className="space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">🛒 Carrito de Cotización {editaCot ? `(${editaCot})` : ``}</h2>
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">
+                    🛒 Carrito de Cotización {editaCot ? `(${editaCot})` : ``}
+                  </h2>
                   <button
                     className="inline-block mt-2 px-3 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700"
-                    onClick={() => {setEditaCot(''); setCarrito([]); setClienteCotizacion('');}}
-                    >
+                    onClick={() => {
+                      setEditaCot(''); 
+                      setCarrito([]); 
+                      setClienteCotizacion('');
+                    }}
+                  >
                     Nueva
                   </button>
                   {carrito.length === 0 ? (
@@ -1810,96 +1845,135 @@ export default function BusinessAssistant() {
                       <p className="text-sm">Agrega productos desde el catálogo</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {carrito.map(item => (
-                        <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-800">{item.nombre}</h4>
-                              <p className="text-xs text-gray-500">SKU: {item.sku} | {item.proveedor}</p>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Costo: ${parseFloat(item.precio).toLocaleString()}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => actualizarCantidad(item.id, 0)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                          <div className="flex items-center justify-between mt-3">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => actualizarCantidad(item.id, item.cantidad - 1)}
-                                className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
-                              >
-                                -
-                              </button>
-                              <span className="w-12 text-center text-black font-semibold">{item.cantidad}</span>
-                              <button
-                                onClick={() => actualizarCantidad(item.id, item.cantidad + 1)}
-                                className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
-                              >
-                                +
-                              </button>
-                            </div>
-                            <span className="font-bold text-gray-800">
-                              ${(item.precio * item.cantidad).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="space-y-6">
+                      {/* Control de margen global */}
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Margen Global: {margenGlobal}%
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={margenGlobal}
+                          onChange={(e) => setMargenGlobal(parseInt(e.target.value))}
+                          className="w-full"
+                        />
+                        <button
+                          onClick={aplicarMargenGlobal}
+                          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm w-full"
+                        >
+                          Aplicar {margenGlobal}% a todos los productos
+                        </button>
+                      </div>
+                      {/* Items del carrito */}
+                      {carrito.map(item => {
+                        const precioVenta = calcularPrecioVenta(item.precio, item.margen);
+                        const gananciaItem = (precioVenta - item.precio) * item.cantidad;
+                        const totalItem = precioVenta * item.cantidad;
 
-                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-6">
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Cliente
-                            </label>
-                            <input
-                              type="text"
-                              value={clienteCotizacion}
-                              onChange={(e) => setClienteCotizacion(e.target.value)}
-                              placeholder="Nombre del cliente"
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Margen de Ganancia: {margenGanancia}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={margenGanancia}
-                              onChange={(e) => setMargenGanancia(parseInt(e.target.value))}
-                              className="w-full"
-                            />
-                            <div className="flex justify-between text-xs text-gray-600 mt-1">
-                              <span>0%</span>
-                              <span>50%</span>
-                              <span>100%</span>
+                        return (
+                          <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-800">{item.nombre}</h4>
+                                <p className="text-xs text-gray-500">SKU: {item.sku} | {item.proveedor}</p>
+                              </div>
+                              <button
+                                onClick={() => actualizarCantidad(item.id, 0)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+
+                            {/* Cantidad */}
+                            <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                              <span className="text-sm text-gray-600">Cantidad:</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => actualizarCantidad(item.id, item.cantidad - 1)}
+                                  className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
+                                >
+                                  -
+                                </button>
+                                <span className="w-12 text-center text-black font-semibold">{item.cantidad}</span>
+                                <button
+                                  onClick={() => actualizarCantidad(item.id, item.cantidad + 1)}
+                                  className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Margen individual */}
+                            <div className="mb-3 pb-3 border-b border-gray-200">
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Margen de ganancia: {item.margen}%
+                              </label>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={item.margen}
+                                onChange={(e) => actualizarMargen(item.id, e.target.value)}
+                                className="w-full"
+                              />
+                            </div>
+
+                            {/* Desglose de precios */}
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Costo unitario:</span>
+                                <span className="text-gray-800">${item.precio.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Precio venta unitario:</span>
+                                <span className="text-blue-600 font-semibold">${precioVenta.toFixed(2).toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between text-green-600">
+                                <span>Ganancia (este producto):</span>
+                                <span className="font-semibold">+${gananciaItem.toFixed(2).toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between pt-2 border-t border-gray-200 font-bold">
+                                <span className="text-gray-800">Total producto:</span>
+                                <span className="text-blue-700">${totalItem.toFixed(2).toLocaleString()}</span>
+                              </div>
                             </div>
                           </div>
+                        );
+                      })}
+
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Cliente
+                          </label>
+                          <input
+                            type="text"
+                            value={clienteCotizacion}
+                            onChange={(e) => setClienteCotizacion(e.target.value)}
+                            placeholder="Nombre del cliente"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          />
                         </div>
 
-                        <div className="mt-6 space-y-2 border-t border-blue-200 pt-4">
+                        <div className="space-y-2 border-t border-blue-200 pt-4">
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Subtotal (Costo):</span>
-                            <span className="text-gray-600 font-semibold">${calcularSubtotal().toLocaleString()}</span>
+                            <span className="text-gray-600 font-semibold">${calcularSubtotal().toFixed(2).toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Ganancia ({margenGanancia}%):</span>
+                            <span className="text-gray-600">Ganancia Total:</span>
                             <span className="font-semibold text-green-600">
-                              +${calcularGanancia().toLocaleString()}
+                              +${calcularGananciaTotal().toFixed(2).toLocaleString()}
                             </span>
                           </div>
                           <div className="flex justify-between text-lg pt-2 border-t border-blue-300">
                             <span className="font-bold text-gray-800">Total a Cobrar:</span>
                             <span className="font-bold text-blue-600">
-                              ${calcularTotal().toLocaleString()}
+                              ${calcularTotalVenta().toFixed(2).toLocaleString()}
                             </span>
                           </div>
                         </div>
