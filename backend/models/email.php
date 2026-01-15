@@ -73,6 +73,7 @@ class Email {
     public function enviar($html = null) {
         try {
             $this->mailer->addAddress($this->destinatario);
+            $this->mailer->addCC('egarcia@acciontic.com.mx');
             $this->mailer->Subject = $this->asunto;
             $this->mailer->Body = $html ?? $this->mensaje;
             
@@ -95,6 +96,7 @@ class Email {
     public function enviarCotizacion($htmlCotizacion, $nombreArchivo = 'cotizacion.html') {
         try {
             $this->mailer->addAddress($this->destinatario);
+            $this->mailer->addCC('egarcia@acciontic.com.mx');
             $this->mailer->Subject = $this->asunto;
             
             // Cuerpo del correo
